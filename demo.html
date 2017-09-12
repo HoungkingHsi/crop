@@ -1,0 +1,134 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+      <title>clip picture demo with indeex</title>
+    <style>
+        canvas {
+            background-color: peru;
+        }
+    </style>
+    <link rel="stylesheet" href="css/jquery.Jcrop.css">
+</head>
+<body>
+
+<div class="uploadPics">
+    <div id=imgfield  style=overflow:hidden;width:300px;height:300px;background-color:#f1f1f1;>
+        <img src="" alt="" id="cropbox">
+    </div>
+
+    <canvas id="myCan" width="200" height="200"></canvas>
+
+    <div class="picFooter">
+        <input type="file" id="fileimg" name="fileimg" style="display:none" onchange="imgchange()"/>
+        <button class="btn upload"   onclick="getimg()">上传</button>
+         
+        <button class="btn confirm" onclick="subform()">确认</button>
+    </div>
+</div>
+
+</body>
+
+<script type="text/javascript" src="js/jquery.min.js"></script>
+<script type="text/javascript" src="js/jquery.Jcrop.js"></script>
+
+<script type="text/javascript">
+    function subform() {
+        var data = document.getElementById("myCan").toDataURL();
+        var formData = new FormData();
+        formData.append("imageName", dataURLtoBlob(data));
+
+        $.ajax({
+            url: 'http://192.168.170.39:27010/post',
+            type: 'post',
+            data: formData,
+            dataType: 'json',
+            processData: false,
+            contentType: false,
+            success: function (msg) {
+                if (msg) {
+                    alert(msg.msg);
+                }
+            }, error: function (err) {
+                alert("上传图片失败！api错误")
+            }
+        })
+    }
+
+    function getimg() {
+        $("#fileimg").click();
+    }
+
+    function imgchange() {
+        var localimg = $("#fileimg").get(0).files[0];
+        if (!localimg) {
+            return;
+        }
+
+        var fileName = localimg.name;
+        var fileSize = localimg.size;
+        var fileType = fileName.substring(fileName.lastIndexOf('.'), fileName.length).toLowerCase();
+        if (fileType != '.gif' && fileType != '.jpeg' && fileType != '.png' && fileType != '.jpg') {
+            alert("上传失败，请上传jpg,png格式的图片");
+            return;
+        }
+
+        var size = 3 * 1024 * 1024;
+        if (fileSize > size) {
+            alert("上传失败，请上传3MB以内的图片。");
+            return;
+        }
+
+        var reader = new FileReader();
+        reader.readAsDataURL(localimg);
+        reader.onload = function (e) {
+            var img = document.getElementById('cropbox');
+            img.setAttribute('src', e.target.result)
+            $("#imgfield").html(img);
+            initJcrop();
+        };
+    }
+
+    var jcropApi;
+    function initJcrop() {
+        if(jcropApi)  {
+            jcropApi.destroy();
+            document.getElementById("myCan").getContext("2d").clearRect(0,0,200,200);
+        }
+        $('#cropbox').Jcrop({
+            allowSelect: true,
+            baseClass: 'jcrop',
+            onSelect: updateCoords,
+            aspectRatio: 1,
+            boxWidth: 300,
+            boxHeight: 300
+        }, function () {
+            var ss = this.getWidgetSize();
+            var aheight = (300 - Number(ss[1])) / 2 + "px";
+            $(".jcrop-holder").css("margin-top", aheight);
+            jcropApi = this;
+        });
+    }
+
+    function updateCoords(c) {
+        var img = document.getElementById("cropbox");
+        var ctx = document.getElementById("myCan").getContext("2d");
+
+        ctx.drawImage(img, c.x, c.y, c.w, c.h, 0, 0, 200, 200);
+    }
+
+    function dataURLtoBlob(dataurl) {
+        var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], {type: mime});
+    }
+
+</script>
+
+
+</html>
+
+
